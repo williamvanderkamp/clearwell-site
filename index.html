@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' blob: data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Clearwell</title>
+<meta name="description" content="Cleans groundwater well records and analyzes pumping tests, in your browser, using published methods.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23fbfdfd'/%3E%3Crect x='9' y='3' width='14' height='6' fill='%23c9b48f'/%3E%3Crect x='9' y='9' width='14' height='7' fill='%23a9b6a0'/%3E%3Crect x='9' y='16' width='14' height='7' fill='%238ea5b0'/%3E%3Crect x='9' y='23' width='14' height='6' fill='%235f7d8d'/%3E%3Crect x='5' y='12' width='22' height='2.5' fill='%230f6c8c'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="uPlot.min.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body data-view="home">
+<div class="wrap">
+  <header>
+    <h1><a href="#" class="home-link">Clearwell</a></h1>
+    <p class="lede" id="homeLede">Groundwater software built on published methods, with every step shown.<span class="home-only"> Choose what you have.</span></p>
+  </header>
+
+  <!-- The tools in four groups. main.js adds the other tools' cards to the group each
+       names (tools/index.js), in the order EXTRA_TOOLS lists them. -->
+  <div class="error" id="homeError" role="alert" hidden></div>
+  <div class="tool-groups" id="home">
+    <section class="tool-group" aria-labelledby="groupTests">
+      <h2 class="group-title" id="groupTests">Pumping and aquifer tests</h2>
+      <div class="choices" data-group="tests">
+        <a class="choice" href="#pumping">
+          <div class="strata" aria-hidden="true"></div>
+          <div class="stack">
+            <h3>Analyze a pumping test</h3>
+            <p>You have a pumping test, with or without recovery. Get drawdown, transmissivity, storativity and extended drawdown from recovery.</p>
+            <span class="btn choice-go">Open</span>
+          </div>
+        </a>
+      </div>
+    </section>
+    <section class="tool-group" aria-labelledby="groupModels">
+      <h2 class="group-title" id="groupModels">Groundwater flow models</h2>
+      <div class="choices" data-group="models"></div>
+    </section>
+    <section class="tool-group" aria-labelledby="groupLevels">
+      <h2 class="group-title" id="groupLevels">Water levels and loggers</h2>
+      <div class="choices" data-group="levels">
+        <a class="choice" href="#record">
+          <div class="strata" aria-hidden="true"></div>
+          <div class="stack">
+            <h3>Clean a well record</h3>
+            <p>You have a water level record and a barometer. Remove barometric pressure and earth tide effects, and any other effect you measured, such as rain or a river stage, and see exactly what was removed.</p>
+            <span class="btn choice-go">Open</span>
+          </div>
+        </a>
+      </div>
+    </section>
+    <section class="tool-group" aria-labelledby="groupProperties">
+      <h2 class="group-title" id="groupProperties">Water and sediment properties</h2>
+      <div class="choices" data-group="properties"></div>
+    </section>
+    <section class="tool-group" aria-labelledby="groupOther" hidden>
+      <h2 class="group-title" id="groupOther">More tools</h2>
+      <div class="choices" data-group="other"></div>
+    </section>
+  </div>
+
+  <div class="tool" id="extraTool" hidden>
+    <div class="stack">
+      <a class="back" href="#">All tools</a>
+      <h2 class="tool-title" id="extraTitle"></h2>
+      <p class="lede" id="extraLede"></p>
+    </div>
+    <div class="stack" id="extraHost"></div>
+  </div>
+
+  <div class="tool" id="tool" hidden>
+    <div class="stack">
+      <a class="back" href="#">All tools</a>
+      <h2 class="tool-title" id="toolTitle"></h2>
+      <p class="lede" id="toolLede"></p>
+    </div>
+    <section class="drop" id="drop" aria-label="Add a file">
+      <div class="strata" aria-hidden="true"></div>
+      <div>
+        <strong>Drop a file anywhere on this page</strong>
+        <span id="dropText"></span>
+      </div>
+      <div class="drop-actions">
+        <input type="file" id="file" accept=".csv,.tsv,.txt,.dat,.xlsx,.xls,.xlsm" hidden>
+        <button class="btn" id="pick" type="button">Choose a file</button>
+        <span class="samples" id="samples"></span>
+      </div>
+    </section>
+    <p class="hint loaded" id="exampleNote" role="status" hidden></p>
+    <div class="error" id="error" role="alert" hidden></div>
+    <details class="panel spec" id="spec" open>
+      <summary>What your spreadsheet needs</summary>
+      <div class="tablewrap"><table id="specTable">
+        <thead><tr><th>Column</th><th>Needed</th><th>What goes in it</th><th>Heading to use</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <ul class="notes" id="specNotes"></ul>
+      <div class="spec-examples">
+        <strong>Download an example to copy</strong>
+        <span id="specExamples"></span>
+      </div>
+    </details>
+  </div>
+
+  <section class="panel" id="setup" hidden aria-label="Settings">
+    <div class="chart-head">
+      <h2 id="setupTitle">Columns</h2>
+    </div>
+    <div class="group">
+      <h3>Required</h3>
+      <p class="hint">Filled in only where your file says so, usually in its column headings. Nothing is assumed, so anything it doesn't say is left for you.</p>
+      <div class="fields" id="requiredFields">
+        <div class="field" id="sheetField" hidden><label for="sheet">Sheet</label><select id="sheet"></select></div>
+        <div class="field"><label for="colTime">Time column</label><select id="colTime"></select></div>
+        <div class="field for-pumping"><label for="timeKind">Time column holds</label>
+          <select id="timeKind">
+            <option value="">Choose</option>
+            <option value="date">Dates and times</option>
+            <option value="min">Minutes since pumping began</option>
+            <option value="hour">Hours since pumping began</option>
+            <option value="day">Days since pumping began</option>
+          </select></div>
+        <div class="field" id="dateOrderField" hidden><label for="dateOrder">Date order</label>
+          <select id="dateOrder">
+            <option value="">Choose</option>
+            <option value="dmy">Day first (31/12/2026)</option>
+            <option value="mdy">Month first (12/31/2026)</option>
+          </select></div>
+        <div class="field"><label for="colLevel">Water level column</label><select id="colLevel"></select></div>
+        <div class="field"><label for="levelKind">Water level is</label>
+          <select id="levelKind">
+            <option value="">Choose</option>
+            <option value="head">Elevation or height (up is larger)</option>
+            <option value="depth">Depth to water (down is larger)</option>
+            <option value="absolute">Absolute pressure, not yet compensated</option>
+            <option value="drawdown" class="for-pumping">Drawdown from the static level</option>
+          </select></div>
+        <div class="field"><label for="levelUnit">Water level unit</label><select id="levelUnit"><option value="">Choose</option></select></div>
+        <div class="field for-pumping" id="pumpStartField"><label for="pumpStart">Pumping started</label><input id="pumpStart" placeholder="YYYY-MM-DD HH:MM"><button class="offer" id="pumpStartOffer" type="button" hidden></button></div>
+        <div class="field for-pumping"><label for="pumpStop">Pumping stopped</label><input id="pumpStop" placeholder="YYYY-MM-DD HH:MM"><button class="offer" id="pumpStopOffer" type="button" hidden></button>
+          <label class="check"><input id="noStop" type="checkbox"> The record ends before the pump stopped</label></div>
+        <div class="field for-pumping"><label for="rate">Pumping rate</label><input id="rate" inputmode="decimal"></div>
+        <div class="field for-pumping"><label for="rateUnit">Rate unit</label><select id="rateUnit"><option value="">Choose</option></select></div>
+        <div class="field for-pumping"><label for="wellType">This record is from</label>
+          <select id="wellType">
+            <option value="">Choose</option>
+            <option value="observation">An observation well</option>
+            <option value="pumped">The pumped well</option>
+          </select></div>
+        <div class="field for-pumping" id="distanceField"><label for="distance">Distance from pumped well</label><input id="distance" inputmode="decimal"></div>
+        <div class="field for-pumping" id="distanceUnitField"><label for="distanceUnit">Distance unit</label>
+          <select id="distanceUnit"><option value="">Choose</option><option value="m">m</option><option value="ft">ft</option></select></div>
+      </div>
+    </div>
+    <div class="group">
+      <h3>Optional</h3>
+      <p class="hint">Leave these blank to skip them. <span class="for-pumping">A barometer lets it remove barometric effects from the record. </span>The earth tide needs latitude, longitude and the file clock together.</p>
+      <div class="fields" id="optionalFields">
+        <div class="field" id="baroField"><label for="colBaro">Barometric pressure column</label><select id="colBaro"></select></div>
+        <div class="field" id="baroUnitField"><label for="baroUnit">Barometer unit</label><select id="baroUnit"><option value="">Choose</option></select></div>
+        <div class="field" id="colTime2Field"><label for="colTime2">Separate time column</label><select id="colTime2"></select></div>
+        <div class="field"><label for="userBE">Your barometric efficiency</label><input id="userBE" inputmode="decimal" placeholder="0 to 1"></div>
+        <div class="field"><label for="lat">Well latitude</label><input id="lat" inputmode="decimal" placeholder="Decimal degrees"></div>
+        <div class="field"><label for="lon">Well longitude</label><input id="lon" inputmode="decimal" placeholder="Decimal degrees"></div>
+        <div class="field"><label for="utcOffset">File clock, hours from UTC</label><input id="utcOffset" inputmode="decimal"></div>
+        <div class="field for-record"><label for="fitStart">Fit from</label><input id="fitStart" type="date"></div>
+        <div class="field for-record"><label for="fitEnd">Fit to</label><input id="fitEnd" type="date"></div>
+        <div class="field for-pumping"><label for="fitFromMin">Fit from, minutes of pumping</label><input id="fitFromMin" inputmode="decimal"></div>
+        <div class="field for-pumping"><label for="fitToMin">Fit to, minutes of pumping</label><input id="fitToMin" inputmode="decimal"></div>
+        <div class="field for-pumping"><label for="staticLevel">Static level</label><input id="staticLevel" inputmode="decimal"></div>
+        <label class="check for-pumping"><input id="removeTrend" type="checkbox"> Remove the trend from before pumping</label>
+      </div>
+    </div>
+    <div class="group for-record" id="inputsGroup">
+      <h3>Further measured inputs</h3>
+      <p class="hint">Optional. Any other series measured on the same rows, such as a recording rain gauge, a river, lake or pond stage, or the pumping of a nearby well. Each is fitted together with the barometric response, and you choose whether its effect is removed or only reported. An amount per row, such as rain, is the amount since the row before, with 0 for none. A gauge that reports a running total is a level.</p>
+      <p class="hint">The lag length is yours to give. Make it long enough for the response to settle, since the fit takes whatever stands at the last lag to last: Dörr et al. (2026) took at least the time b²/D for pressure to cross the confining layer, of thickness b and diffusivity D, and Haehnel et al. (2024) the lag past which the coefficients settle about zero. The barometric response uses 48 hours. Each lag step adds a coefficient, and the fit needs at least three steps of record for each one.</p>
+      <div class="input-list" id="inputsHost"></div>
+      <div><button class="btn quiet small" id="addInput" type="button">Add an input</button></div>
+    </div>
+    <div class="setup-foot">
+      <p class="hint for-record">Efficiencies depend on the units, so check them first. Barometric efficiency is 1 minus loading efficiency. To avoid pumping or sensor changes, set the fit dates to a quiet period. The result still covers the whole record.</p>
+      <p class="hint for-pumping">Enter the pump's true times from the field log. A distant well reacts late, so the level can mislead. Results scale directly with the rate. Barometric efficiency is fitted only on the record before pumping. On less than a day of that, enter your own, which the well record tool can fit from a longer record. The fit window sets which part of pumping the Theis curve and straight line use.</p>
+      <div class="run">
+        <button class="btn" id="run" type="button">Run</button>
+        <p class="needed" id="needed" role="status"></p>
+        <div class="error" id="runError" role="alert" hidden></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="results" hidden aria-label="Results">
+    <div class="chart-head"><h2>Fitted results</h2><span class="hint" id="period"></span></div>
+    <div class="tablewrap">
+      <table id="summary">
+        <thead><tr><th>Method</th><th>Barometric efficiency</th><th>Loading efficiency</th><th>BE range, six parts of record</th><th>Change explained</th><th>Step-to-step change left (mm&nbsp;rms)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="hint"><span id="rawChange"></span> These figures describe the fit to this same file. They are not evidence that the correction is right. A real signal that moves with air pressure would be removed too.</p>
+    <ul class="notes" id="notes" hidden></ul>
+    <div class="downloads">
+      <button class="btn" id="saveXlsx" type="button">Download corrected spreadsheet</button>
+      <span id="saveStatus" role="status"></span>
+    </div>
+  </section>
+
+  <section class="panel" id="c1Panel" hidden>
+    <div class="chart-head"><h3>Water level before and after</h3><button class="btn quiet small" data-png="level" type="button">Save chart</button></div>
+    <p class="chart-sub">Click a name in the legend to hide that line. Drag across a chart to zoom in, double-click to zoom out. The time axis is the file's own clock.</p>
+    <div class="chart" id="chart-level"></div>
+  </section>
+  <section class="panel" id="c2Panel" hidden>
+    <div class="chart-head"><h3>What was removed</h3><button class="btn quiet small" data-png="removed" type="button">Save chart</button></div>
+    <p class="chart-sub">Each effect in the direction of the water level column. Corrected level is the raw level minus these.</p>
+    <div class="chart" id="chart-removed"></div>
+  </section>
+  <section class="panel" id="c3Panel" hidden>
+    <div class="two">
+      <div class="stack">
+        <div class="chart-head"><h3>Barometric response</h3><button class="btn quiet small" data-png="response" type="button">Save chart</button></div>
+        <p class="chart-sub">Running sum of the fitted lag coefficients. A confined well rises to its barometric efficiency and holds.</p>
+        <div class="chart" id="chart-response"></div>
+      </div>
+      <div class="stack">
+        <h3>Tidal lines</h3>
+        <p class="chart-sub">Amplitude in mm of water. K1 and S2 also carry atmospheric and daily signals, and only the M2 and O1 lines decide whether a tide is fitted.</p>
+        <div class="tablewrap"><table id="lines"><thead><tr><th>Line</th><th>Raw</th><th>Corrected</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="inputsPanel" hidden aria-label="Further inputs">
+    <div class="chart-head"><h2>Further inputs</h2></div>
+    <p class="chart-sub">Each input's fitted response, with its standard error, as a rise in the water level per unit rise of the input, whatever the direction of your level column. The immediate part is the response within the same step, the lagged part what follows, and the whole response their sum by the last lag.</p>
+    <div class="tablewrap">
+      <table id="inputsTable">
+        <thead><tr><th>Input</th><th>Response in</th><th>Lag</th><th>Immediate part</th><th>Lagged part</th><th>Whole response</th><th>Done</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="input-notes" id="inputsText"></div>
+    <div class="chart-head"><h3>Response to each input</h3><button class="btn quiet small" data-png="inputResponse" type="button">Save chart</button></div>
+    <p class="chart-sub">Running sum of each input's lag coefficients, with two standard errors either side. For an amount it is the response to one unit at lag 0; for a level, to a lasting unit step.</p>
+    <div class="chart" id="chart-inputResponse"></div>
+    <div class="chart-head"><h3>Fitted effect of each input</h3><button class="btn quiet small" data-png="inputEffect" type="button">Save chart</button></div>
+    <p class="chart-sub">Each input's whole fitted effect, in the direction of the water level column, whether or not it was removed.</p>
+    <div class="chart" id="chart-inputEffect"></div>
+  </section>
+
+  <section class="panel" id="methodPanel" hidden>
+    <h2>Exactly what was done to this file</h2>
+    <p class="chart-sub">The same text is the first sheet of the spreadsheet.</p>
+    <div id="method"></div>
+  </section>
+
+  <section class="panel" id="pumpResults" hidden aria-label="Results">
+    <div class="chart-head"><h2>Aquifer results</h2></div>
+    <p class="chart-sub" id="pumpLead"></p>
+    <div class="tablewrap"><table id="pumpSummary"><thead></thead><tbody></tbody></table></div>
+    <p class="hint">Each method assumes more than the data can confirm. Agreement between them is a good sign, not proof.<span id="rawNote"> T, raw is the same analysis with nothing removed.</span></p>
+    <ul class="notes" id="pumpNotes" hidden></ul>
+    <div class="downloads">
+      <button class="btn" id="pumpSaveXlsx" type="button">Download spreadsheet</button>
+      <span id="pumpSaveStatus" role="status"></span>
+    </div>
+  </section>
+
+  <section class="panel" id="pExtPanel" hidden>
+    <div class="chart-head"><h2>Extended drawdown: if pumping had continued</h2><button class="btn quiet small" data-pump-png="extended" type="button">Save chart</button></div>
+    <p class="chart-sub">After the pump stops, each recovery reading gives the drawdown that would have followed had pumping continued, by the method of van der Kamp (1989). The dots right of the dashed line come from those readings. The two lines are the standard methods, carried forward from the pumping data alone.</p>
+    <div class="chart" id="chart-p-extended"></div>
+    <div class="tablewrap"><table id="pumpReach"><thead></thead><tbody></tbody></table></div>
+    <p class="chart-sub">If the dots follow the lines, recovery supports the standard answer. If they part smoothly, the aquifer is probably not behaving as those methods assume. If the dots jump at the dashed line or turn downward, a condition of the test probably failed, so check that the static level and pumping rate held steady.</p>
+  </section>
+  <section class="panel" id="p1Panel" hidden>
+    <div class="chart-head"><h3>Water level through the test</h3><button class="btn quiet small" data-pump-png="level" type="button">Save chart</button></div>
+    <p class="chart-sub">Click a name in the legend to hide that line. Drag across a chart to zoom in, double-click to zoom out.</p>
+    <div class="chart" id="chart-p-level"></div>
+  </section>
+  <section class="panel" id="p2Panel" hidden>
+    <div class="chart-head"><h3>What was removed</h3><button class="btn quiet small" data-pump-png="removed" type="button">Save chart</button></div>
+    <p class="chart-sub">Each effect in the direction of the water level column. Fitted before pumping, then applied throughout.</p>
+    <div class="chart" id="chart-p-removed"></div>
+  </section>
+  <section class="panel" id="p3Panel" hidden>
+    <div class="chart-head"><h3>Diagnostic: drawdown and its log derivative</h3><button class="btn quiet small" data-pump-png="diagnostic" type="button">Save chart</button></div>
+    <p class="chart-sub">Read this first. In an ideal confined aquifer the derivative levels off. A later fall can mean leakage or recharge, and a rise can mean a barrier.</p>
+    <div class="chart" id="chart-p-diagnostic"></div>
+  </section>
+  <section class="panel" id="p4Panel" hidden>
+    <div class="chart-head"><h3>Drawdown against log time</h3><button class="btn quiet small" data-pump-png="semilog" type="button">Save chart</button></div>
+    <p class="chart-sub">The fitted line is drawn only over the part of the record it used.</p>
+    <div class="chart" id="chart-p-semilog"></div>
+  </section>
+  <section class="panel" id="p5Panel" hidden>
+    <div class="chart-head"><h3>Theis recovery</h3><button class="btn quiet small" data-pump-png="recovery" type="button">Save chart</button></div>
+    <p class="chart-sub">Time runs from right to left here: late recovery is near t/t' of 1. The line should reach zero close to 1.</p>
+    <div class="chart" id="chart-p-recovery"></div>
+  </section>
+
+  <section class="panel" id="pumpMethodPanel" hidden>
+    <h2>Exactly what was done to this file</h2>
+    <p class="chart-sub">The same text is the first sheet of the spreadsheet.</p>
+    <div id="pumpMethod"></div>
+  </section>
+
+  <section class="panel for-pumping" id="pumpAbout">
+    <details>
+      <summary>How this was tested, and what it can't tell you</summary>
+      <div id="pumpTesting">
+        <p>No pumping test comes with a known true answer, so none of this shows a result is right for your test. Please judge it on your own data.</p>
+        <p><strong>Method.</strong> These are the published methods, in my own implementation. They have not been compared with AQTESOLV or AquiferTest output. It has not yet been run on a real test that had a barometer or recovery data.</p>
+        <p><strong>Real textbook data.</strong> On Oude Korendijk, from Kruseman and de Ridder (1994), the Theis fit gives T 480&nbsp;m²/d and S 1.14&nbsp;×&nbsp;10⁻⁴, matching the same fit in TTim. A line through everything u allows gives T 491&nbsp;m²/d, not the book's 385, because the book's line follows only the readings from 1.4 to 13.1&nbsp;minutes, before the curve flattens. With Fit from 1.4 and Fit to 13.1 the Cooper and Jacob line gives T 385&nbsp;m²/d and S 1.69&nbsp;×&nbsp;10⁻⁴, the book's values. With Fit to 13, the 13.1&nbsp;minute reading is left out and the line gives T 382&nbsp;m²/d. The fit window is a judgment, and the page warns when a line bends like this.</p>
+        <p><strong>Barometric correction.</strong> One invented test, T 250&nbsp;m²/d and a barometric efficiency of 0.35, was moved through a real barometer record in 5-day steps, 23 start dates in all, with no tuning. The median error in T from the recovery line fell from 5.5% to 0.8%, and the worst from 27% to 2.5%. For the straight line it fell from 4.6% to 1.2%, and the worst from 19% to 2.5%. This flatters the method, because the invented well answers air pressure at once and the same way throughout, which is what the correction assumes.</p>
+        <p><strong>Extended drawdown.</strong> It rebuilds computed curves to within 0.3%, including one with a recharge boundary and past two pumping periods. It has not been checked against the published British Columbia tests.</p>
+        <p><strong>Known limits.</strong> One constant rate and one well at a time. No correction for leakage, boundaries, partial penetration or dewatering. On under 14&nbsp;days before pumping only a constant efficiency is fitted, and under a day nothing is. Those cut-offs, and the warning limits, are choices of mine.</p>
+      </div>
+    </details>
+  </section>
+
+  <section class="panel for-record" id="about">
+    <details>
+      <summary>How this was tested, and what it can't tell you</summary>
+      <div id="testing">
+        <p>No public well record comes with a known true answer, so nothing below shows that a correction is right for your well. Please judge it on your own data.</p>
+        <p><strong>Method.</strong> The standard path here is the published one: first-difference regression for constant barometric efficiency, regression deconvolution with a fixed 48-hour lag, and a lagged regression on a computed earth tide. It is my own implementation. It has not been compared with BETCO or KGS BRF output.</p>
+        <p><strong>Test.</strong> The plan and code were fixed before the data was downloaded. It covered 13 USGS wells that played no part in building this tool, 6 in the Klamath basin and 7 on the Virginia Coastal Plain, 5 of those at one site. Each was fitted on its first 70% and scored on the last 30%, once. No well was dropped.</p>
+        <p><strong>Real wells.</strong> The score is the share of typical 24-hour change removed. It is not accuracy, because it would also rise if real signal were removed. The median was 15% for the standard method and 0% for constant barometric efficiency. The standard method made this score worse than the raw record on 4 of the 13&nbsp;wells, by 18 to 45%, and constant efficiency on 6 of them.</p>
+        <p><strong>Known signals.</strong> Signals of known size were added to quiet stretches of those wells, using a barometer the well never felt. Across eight scenarios the median error was 5.3&nbsp;mm for the standard method and 12.2&nbsp;mm for constant efficiency, against signals of 10 to 44&nbsp;mm rms. When the true response was instant, constant efficiency did better, 1.2&nbsp;mm against 4.4&nbsp;mm, because 49 fitted lags cost something on a short record. I chose those scenarios, so they are a check, not field accuracy.</p>
+        <p><strong>Known limits.</strong> On the Virginia wells the tide fit gained the most, but those wells are near tidal water, so part of what it removed may be ocean loading, not earth tide. The computed tide is for a rigid earth and hasn't been checked against ETERNA or TSoft. Coarse barometers bias efficiencies low. The two methods can disagree widely: on some Virginia wells the fits gave 0.54 and 0.04, and there is no truth to settle which is right.</p>
+      </div>
+    </details>
+  </section>
+  <footer class="site-foot">
+    <a class="back" id="footBack" href="#">All tools</a>
+    <p class="privacy">Your files stay on this computer. They are read and processed by this page in your browser, and are not uploaded or stored. The page's security policy blocks it from making any network connection after it loads, and there are no trackers.</p>
+  </footer>
+  <div id="exportStage" aria-hidden="true"></div>
+</div>
+
+<script src="uPlot.iife.min.js"></script>
+<script src="xlsx.full.min.js"></script>
+<script src="exceljs.min.js"></script>
+<script type="module" src="app/main.js"></script>
+</body>
+</html>
